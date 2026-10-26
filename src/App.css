@@ -1,0 +1,287 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  color: #183c32;
+  background: #f6f7f2;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font: inherit;
+}
+
+.neera {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.brand {
+  color: #183c32;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -2px;
+  text-decoration: none;
+}
+
+.brand span {
+  color: #cc864b;
+}
+
+.demo-badge {
+  padding: 8px 14px;
+  border-radius: 30px;
+  background: #e5eee5;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.intro {
+  padding: 76px 0 40px;
+}
+
+.eyebrow {
+  color: #617969;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+h1 {
+  margin: 16px 0;
+  font-size: clamp(38px, 7vw, 64px);
+  line-height: 1.1;
+  letter-spacing: -2px;
+}
+
+.subtitle {
+  max-width: 460px;
+  color: #627168;
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+.register {
+  max-width: 620px;
+}
+
+.section-heading h2 {
+  margin-bottom: 8px;
+  font-size: 24px;
+}
+
+.section-heading p {
+  margin-top: 0;
+  color: #627168;
+}
+
+.class-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.class-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 22px;
+  color: #183c32;
+  background: #fff;
+  border: 1px solid #dce3d9;
+  border-radius: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.class-card:hover,
+.class-card[aria-pressed='true'] {
+  background: #edf3e9;
+  border-color: #648365;
+}
+
+.class-card:focus-visible {
+  outline: 3px solid #648365;
+  outline-offset: 4px;
+}
+
+.class-card strong {
+  display: block;
+  font-size: 18px;
+}
+
+.student-count {
+  display: block;
+  margin-top: 6px;
+  color: #627168;
+  font-size: 14px;
+}
+
+.selection-message {
+  min-height: 44px;
+  color: #627168;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+footer {
+  margin-top: 56px;
+  padding-top: 24px;
+  border-top: 1px solid #dce3d9;
+  color: #627168;
+  font-size: 13px;
+}
+
+.attendance {
+  padding-top: 16px;
+}
+
+.back-button {
+  margin-bottom: 32px;
+  padding: 12px 0;
+  background: transparent;
+  border: none;
+  color: #183c32;
+  cursor: pointer;
+}
+
+.primary-button {
+  padding: 14px 20px;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  background: #183c32;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.progress {
+  margin: 24px 0 16px;
+  color: #627168;
+}
+
+.student-list {
+  display: grid;
+  gap: 12px;
+}
+
+.student-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  border: 1px solid #dce3d9;
+  border-radius: 16px;
+  background: white;
+}
+
+.status-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.status-button {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid #dce3d9;
+  border-radius: 10px;
+  color: #183c32;
+  background: white;
+  cursor: pointer;
+}
+
+.present[aria-pressed='true'] {
+  background: #dceedd;
+  border-color: #54805b;
+}
+
+.absent[aria-pressed='true'] {
+  background: #fbe1de;
+  border-color: #b75e54;
+}
+
+.late[aria-pressed='true'] {
+  background: #fff0cc;
+  border-color: #a17b29;
+}
+
+.status-button[aria-pressed='true'] {
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+button:focus-visible {
+  outline: 3px solid #648365;
+  outline-offset: 3px;
+}
+
+.attendance-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.summary-card {
+  display: grid;
+  gap: 6px;
+  padding: 18px 12px;
+  border: 1px solid #dce3d9;
+  border-radius: 14px;
+  background: white;
+  text-align: center;
+}
+
+.summary-card strong {
+  font-size: 28px;
+}
+
+.summary-card span {
+  color: #627168;
+  font-size: 14px;
+}
+
+.save-section {
+  margin-top: 24px;
+}
+
+.primary-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.storage-note {
+  padding-top: 20px;
+  border-top: 1px solid #dce3d9;
+  color: #627168;
+  font-size: 13px;
+  line-height: 1.6;
+}
