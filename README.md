@@ -1,75 +1,89 @@
-# React + TypeScript + Vite
+# Neera
+### Another Chance to Learn
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Neera is an attendance and school continuity platform being developed
+for Ugandan primary and secondary schools.
 
-Currently, two official plugins are available:
+It is designed for teachers, including those with limited technical
+experience and schools with unreliable internet access. Students do
+not need phones.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Project status
 
-## React Compiler
+Early prototype using fictional student data.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Working features
+- Class selection
+- Present, absent and late attendance marking
+- Mark all students present
+- Live attendance totals
+- Separate daily registers for each class
+- Attendance saved locally in the browser
+- Read-only attendance history
+- Warning before leaving a register with unsaved changes
 
-## Expanding the ESLint configuration
+### Planned features
+- Student search and attendance filters
+- Offline app loading
+- School accounts and secure access
+- Synchronisation with a school database
+- School administration dashboard
+- Parent and guardian SMS notifications
+- Teacher-managed catch-up materials
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Technology
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- React
+- TypeScript
+- Vite
+- CSS
+- Browser localStorage
+- ESLint
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Run locally
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Install dependencies:
 
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Start the development server:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm run dev
 ```
+
+Open the local URL shown in the terminal.
+
+## Code checks
+
+```bash
+npm run lint
+npm run build
+```
+
+## Current limitations
+
+Attendance is stored only in the browser and device where it was saved.
+Clearing browser site data can delete those records.
+
+The app does not yet support offline reopening, school synchronisation,
+authentication or SMS delivery.
+
+The prototype uses four fictional students per class. Class sizes on
+the home screen are illustrative.
+
+## Development log
+
+### 26 October 2026
+- Created the React and TypeScript project.
+- Built class selection and attendance marking.
+- Added local saving by class and date.
+- Added read-only attendance history.
+- Successfully built the project.
+- Initialised Git version control.
+
+## Author
+
+Daisy Juliana Babirye

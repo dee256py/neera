@@ -94,7 +94,22 @@ export default function AttendanceRegister({
   )
   const [message, setMessage] = useState(initial.message)
   const [hasChanges, setHasChanges] = useState(false)
-    const [showHistory, setShowHistory] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
+  const [search, setSearch] = useState('')
+  const [unmarkedOnly, setUnmarkedOnly] = useState(false)
+
+  const query = search.trim().toLowerCase()
+
+  const filteredStudents = students.filter((student) => {
+    const matchesSearch =
+      student.name.toLowerCase().includes(query) ||
+      student.id.toLowerCase().includes(query)
+
+    const matchesFilter =
+      !unmarkedOnly || attendance[student.id] === undefined
+
+    return matchesSearch && matchesFilter
+  })
 
   if (showHistory) {
     return (
@@ -219,8 +234,49 @@ export default function AttendanceRegister({
         {hasChanges && ' · Unsaved changes'}
       </p>
 
+            <div className="register-tools">
+        <label className="search-label" htmlFor="student-search">
+          Find a student
+        </label>
+
+        <input
+          id="student-search"
+          className="student-search"
+          type="search"
+          placeholder="Search name or student ID"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+
+        <label className="filter-label">
+          <input
+            type="checkbox"
+            checked={unmarkedOnly}
+            onChange={(event) => setUnmarkedOnly(event.target.checked)}
+          />
+          Unmarked only
+        </label>
+
+        <p className="selection-message" role="status">
+          Showing {filteredStudents.length} of {students.length} students
+        </p>
+
+        {(search || unmarkedOnly) && (
+            <button className="reset-filters" onClick={() => { setSearch('') 
+                setUnmarkedOnly(false)}}>
+            Clear search and filter
+          </button>
+        )}
+      </div>
+
+      {filteredStudents.length === 0 && (
+        <p className="selection-message">
+          No students match. Clear the search and filter to see everyone.
+        </p>
+      )}
+
       <div className="student-list">
-        {students.map((student) => (
+        {filteredStudents.map((student) => (
           <div className="student-row" key={student.id}>
             <div>
               <strong>{student.name}</strong>
