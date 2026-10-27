@@ -3,7 +3,6 @@ import AttendanceHistory from './AttendanceHistory'
 import { classes } from './schoolData'
 import type { Student } from './schoolData'
 
-
 type Status = 'Present' | 'Absent' | 'Late'
 type Attendance = Record<string, Status>
 
@@ -12,9 +11,18 @@ type Props = {
   onBack: () => void
 }
 
-const options: Status[] = ['Present', 'Absent', 'Late']
+type ReadResult = {
+  attendance: Attendance
+  error: string
+}
 
-// Use the device's local calendar date.
+type Filter = 'All' | 'Unmarked' | Status
+
+const statuses: Status[] = ['Present', 'Absent', 'Late']
+const filters: Filter[] = ['All', 'Unmarked', ...statuses]
+
+// Use the local calendar date instead of UTC, which can select the wrong
+// school day near midnight.
 function getToday() {
   const now = new Date()
   const year = now.getFullYear()
@@ -24,19 +32,24 @@ function getToday() {
   return `${year}-${month}-${day}`
 }
 
-// Check stored data before using it.
-function readAttendance(key: string, students: Student[]): {
-  attendance: Attendance
-  message: string
-} {
+function formatDate(date: string) {
+  return new Date(`${date}T12:00:00`).toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
+// Browser storage can contain outdated or invalid data. Validate it before
+// using it, and only load attendance belonging to the current roster.
+function readAttendance(key: string, students: Student[]): ReadResult {
   try {
-    const stored = localStorage.getItem(key)
+    const raw = localStorage.getItem(key)
 
-    if (!stored) {
-      return { attendance: {}, message: '' }
-    }
+    if (raw === null) return { attendance: {}, error: '' }
 
-    const parsed: unknown = JSON.parse(stored)
+    const parsed: unknown = JSON.parse(raw)
 
     if (
       typeof parsed !== 'object' ||
@@ -53,48 +66,113 @@ function readAttendance(key: string, students: Student[]): {
 
       if (value === undefined) continue
 
-      if (
-        value !== 'Present' &&
-        value !== 'Absent' &&
-        value !== 'Late'
-      ) {
+      if (value !== 'Present' && value !== 'Absent' && value !== 'Late') {
         throw new Error('Invalid attendance status')
       }
 
       attendance[student.id] = value
     }
 
-    return {
-      attendance,
-      message: 'Loaded the saved register for this class and date.',
-    }
+    return { attendance, error: '' }
   } catch {
     return {
       attendance: {},
-      message:
-        'Could not load saved attendance. Check this register before saving.',
+      error: 'Could not read saved attendance. Review the register carefully.',
     }
   }
 }
 
-export default function AttendanceRegister({
-  className,
-  onBack,
-}: Props) {
-  const students = classes.find((schoolClass) => schoolClass.name === className)
-      ?.students ?? []  
-  const [date] = useState(getToday)
-  const storageKey = `neera:attendance:v2:${className}:${date}`
+function loadInitialAttendance(
+  storageKey: string,
+  draftKey: string,
+  students: Student[],
+) {
+  try {
+    // Recover unfinished changes before loading the last confirmed register.
+    if (localStorage.getItem(draftKey) !== null) {
+      const draft = readAttendance(draftKey, students)
 
-  const [initial] = useState(() => readAttendance(storageKey, students))
-  const [attendance, setAttendance] = useState<Attendance>(
-    initial.attendance,
+      if (!draft.error) {
+        return {
+          attendance: draft.attendance,
+          isDraft: true,
+          message: 'Recovered your unfinished draft. Review and save it.',
+        }
+      }
+
+      // A damaged draft should not hide a readable confirmed register.
+      const saved = readAttendance(storageKey, students)
+
+      return {
+        attendance: saved.attendance,
+        isDraft: false,
+        message:
+          'Could not recover the draft. ' +
+          (saved.error || 'Loaded confirmed attendance where available.'),
+      }
+    }
+
+    const saved = readAttendance(storageKey, students)
+
+    return {
+      attendance: saved.attendance,
+      isDraft: false,
+      message: saved.error,
+    }
+  } catch {
+    return {
+      attendance: {} as Attendance,
+      isDraft: false,
+      message: 'Could not access browser storage. Saving may be unavailable.',
+    }
+  }
+}
+
+// CSV fields must escape quotes. Prefix formula-like values so spreadsheet
+// apps treat them as text rather than executable formulas.
+function csvCell(value: string) {
+  const safe = /^\s*[=+\-@]/.test(value) ? `'${value}` : value
+  return `"${safe.replace(/"/g, '""')}"`
+}
+
+export default function AttendanceRegister({ className, onBack }: Props) {
+  const students =
+    classes.find((schoolClass) => schoolClass.name === className)
+      ?.students ?? []
+
+  const [date] = useState(getToday)
+
+  // Drafts and confirmed registers have separate keys. History reads only
+  // confirmed keys, so unfinished work never appears as completed attendance.
+  const storageKey = `neera:attendance:v2:${className}:${date}`
+  const draftKey = `${storageKey}:draft`
+
+  const [initial] = useState(() =>
+    loadInitialAttendance(storageKey, draftKey, students),
   )
+  const [attendance, setAttendance] = useState<Attendance>(initial.attendance)
   const [message, setMessage] = useState(initial.message)
-  const [hasChanges, setHasChanges] = useState(false)
+  const [hasChanges, setHasChanges] = useState(initial.isDraft)
   const [showHistory, setShowHistory] = useState(false)
   const [search, setSearch] = useState('')
-  const [unmarkedOnly, setUnmarkedOnly] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<Filter>('All')
+
+  // Calculate totals from the full roster, independently of visible filters.
+  const marked = students.filter(
+    (student) => attendance[student.id] !== undefined,
+  ).length
+  const complete = students.length > 0 && marked === students.length
+
+  const totals = {
+    Present: 0,
+    Absent: 0,
+    Late: 0,
+  }
+
+  for (const student of students) {
+    const status = attendance[student.id]
+    if (status) totals[status] += 1
+  }
 
   const query = search.trim().toLowerCase()
 
@@ -103,12 +181,135 @@ export default function AttendanceRegister({
       student.name.toLowerCase().includes(query) ||
       student.id.toLowerCase().includes(query)
 
-    const matchesFilter =
-      !unmarkedOnly || attendance[student.id] === undefined
+    const matchesStatus =
+      statusFilter === 'All' ||
+      (statusFilter === 'Unmarked'
+        ? attendance[student.id] === undefined
+        : attendance[student.id] === statusFilter)
 
-    return matchesSearch && matchesFilter
+    return matchesSearch && matchesStatus
   })
 
+  function updateAttendance(updated: Attendance) {
+    // Prevent an open tab from recording today's changes under yesterday.
+    if (date !== getToday()) {
+      setMessage('The date has changed. Go back and reopen this class.')
+      return
+    }
+
+    setAttendance(updated)
+    setHasChanges(true)
+
+    // Save immediately after each marking action, without requiring internet.
+    try {
+      localStorage.setItem(draftKey, JSON.stringify(updated))
+      setMessage('Draft saved on this device. Not yet confirmed.')
+    } catch {
+      setMessage(
+        'Draft saving failed. Keep this page open and try Save attendance.',
+      )
+    }
+  }
+
+  function markStudent(id: string, status: Status) {
+    updateAttendance({ ...attendance, [id]: status })
+  }
+
+  function markAllPresent() {
+    const updated: Attendance = {}
+
+    // This deliberately applies to everyone, including students hidden
+    // by the current search or filter.
+    students.forEach((student) => {
+      updated[student.id] = 'Present'
+    })
+
+    updateAttendance(updated)
+  }
+
+  function saveAttendance() {
+    if (date !== getToday()) {
+      setMessage('The date has changed. Go back and reopen this class.')
+      return
+    }
+
+    if (!complete) return
+
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(attendance))
+    } catch {
+      setMessage('Saving failed. Keep this page open and try again.')
+      return
+    }
+
+    setHasChanges(false)
+
+    // Only remove the draft after the confirmed register has been written.
+    try {
+      localStorage.removeItem(draftKey)
+      setMessage('Attendance confirmed and saved on this device.')
+    } catch {
+      setMessage(
+        'Attendance confirmed, but the draft could not be cleared. ' +
+        'A draft recovery notice may appear when reopening.',
+      )
+    }
+  }
+
+  function exportCsv() {
+    // Export only confirmed attendance, always for the entire class.
+    if (!complete || hasChanges) return
+
+    const rows: string[][] = [
+      ['Date', 'Class', 'Student ID', 'Student name', 'Status'],
+      ...students.map((student) => [
+        date,
+        className,
+        student.id,
+        student.name,
+        attendance[student.id] ?? '',
+      ]),
+    ]
+
+    const csv = rows
+      .map((row) => row.map(csvCell).join(','))
+      .join('\r\n')
+
+    // The UTF-8 marker helps Excel display names correctly.
+    const blob = new Blob(['\uFEFF', csv], {
+      type: 'text/csv;charset=utf-8;',
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+
+    link.href = url
+    link.download =
+      `neera-${className.toLowerCase().replace(/\s+/g, '-')}-${date}.csv`
+
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+
+    // Release the temporary download URL after the browser has used it.
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+    setMessage('CSV download requested for the confirmed register.')
+  }
+
+  function goBack() {
+    if (
+      hasChanges &&
+      !window.confirm(
+        'Leave with unconfirmed changes? Successfully saved drafts ' +
+        'will be available when you return.',
+      )
+    ) {
+      return
+    }
+
+    onBack()
+  }
+
+  // All hooks are above this conditional return so their order stays stable.
   if (showHistory) {
     return (
       <AttendanceHistory
@@ -119,105 +320,28 @@ export default function AttendanceRegister({
     )
   }
 
-  const marked = Object.keys(attendance).length
-  const complete = marked === students.length
-
-  const totals = {
-    Present: Object.values(attendance).filter(
-      (status) => status === 'Present',
-    ).length,
-    Absent: Object.values(attendance).filter(
-      (status) => status === 'Absent',
-    ).length,
-    Late: Object.values(attendance).filter(
-      (status) => status === 'Late',
-    ).length,
-  }
-
-  function markStudent(id: string, status: Status) {
-    setAttendance((previous) => ({
-      ...previous,
-      [id]: status,
-    }))
-    setHasChanges(true)
-    setMessage('')
-  }
-
-  function markAllPresent() {
-    const updated: Attendance = {}
-
-    students.forEach((student) => {
-      updated[student.id] = 'Present'
-    })
-
-    setAttendance(updated)
-    setHasChanges(true)
-    setMessage('')
-  }
-
-  function saveAttendance() {
-    // Avoid saving yesterday's register after leaving the page open.
-    if (date !== getToday()) {
-      setMessage(
-        'The date has changed. Go back and reopen the class for today.',
-      )
-      return
-    }
-
-    if (!complete) return
-
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(attendance))
-      setHasChanges(false)
-      setMessage(
-        'Attendance saved in this browser. You can reopen it here.',
-      )
-    } catch {
-      setMessage(
-        'Saving failed. Keep this page open and try saving again.',
-      )
-    }
-  }
-
-  function goBack() {
-    if (
-      hasChanges &&
-      !window.confirm('Leave this register without saving your changes?')
-    ) {
-      return
-    }
-
-    onBack()
-  }
-
   return (
     <section className="attendance">
-      <button className="back-button" onClick={goBack}>
-        ← Back to classes
-      </button>
-      
-      <div>
-        <button className="back-button" onClick={() => setShowHistory(true)}>
+      <div className="register-navigation">
+        <button className="back-button" onClick={goBack}>
+          ← Back to classes
+        </button>
+        <button
+          className="back-button"
+          onClick={() => setShowHistory(true)}
+        >
           View saved history →
         </button>
       </div>
-      
+
       <p className="eyebrow">
         SAMPLE REGISTER · {students.length} DEMO STUDENTS
       </p>
       <h1>{className}</h1>
-
-      <p className="subtitle">
-        {new Date(`${date}T12:00:00`).toLocaleDateString('en-GB', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-        })}
-      </p>
+      <p className="subtitle">{formatDate(date)}</p>
 
       <div className="attendance-summary" aria-label="Attendance totals">
-        {options.map((status) => (
+        {statuses.map((status) => (
           <div className="summary-card" key={status}>
             <strong>{totals[status]}</strong>
             <span>{status}</span>
@@ -225,20 +349,24 @@ export default function AttendanceRegister({
         ))}
       </div>
 
-      <button className="primary-button" onClick={markAllPresent}>
+      <button
+        className="primary-button"
+        onClick={markAllPresent}
+        disabled={students.length === 0}
+      >
         Mark all present
       </button>
+      <p className="helper-text">Applies to the whole class.</p>
 
       <p className="progress">
         {marked} of {students.length} students marked
-        {hasChanges && ' · Unsaved changes'}
+        {hasChanges && ' · Awaiting confirmation'}
       </p>
 
-            <div className="register-tools">
+      <div className="register-tools">
         <label className="search-label" htmlFor="student-search">
           Find a student
         </label>
-
         <input
           id="student-search"
           className="student-search"
@@ -248,22 +376,36 @@ export default function AttendanceRegister({
           onChange={(event) => setSearch(event.target.value)}
         />
 
-        <label className="filter-label">
-          <input
-            type="checkbox"
-            checked={unmarkedOnly}
-            onChange={(event) => setUnmarkedOnly(event.target.checked)}
-          />
-          Unmarked only
+        <label className="search-label" htmlFor="status-filter">
+          Show students
         </label>
+        <select
+          id="status-filter"
+          className="student-search"
+          value={statusFilter}
+          onChange={(event) =>
+            setStatusFilter(event.target.value as Filter)
+          }
+        >
+          {filters.map((filter) => (
+            <option key={filter} value={filter}>
+              {filter === 'All' ? 'Everyone' : filter}
+            </option>
+          ))}
+        </select>
 
         <p className="selection-message" role="status">
           Showing {filteredStudents.length} of {students.length} students
         </p>
 
-        {(search || unmarkedOnly) && (
-            <button className="reset-filters" onClick={() => { setSearch('') 
-                setUnmarkedOnly(false)}}>
+        {(search || statusFilter !== 'All') && (
+          <button
+            className="secondary-button"
+            onClick={() => {
+              setSearch('')
+              setStatusFilter('All')
+            }}
+          >
             Clear search and filter
           </button>
         )}
@@ -280,9 +422,7 @@ export default function AttendanceRegister({
           <div className="student-row" key={student.id}>
             <div>
               <strong>{student.name}</strong>
-              <span className="student-count">
-                Student {student.id}
-              </span>
+              <span className="student-count">Student {student.id}</span>
             </div>
 
             <div
@@ -290,7 +430,7 @@ export default function AttendanceRegister({
               role="group"
               aria-label={`Attendance for ${student.name}`}
             >
-              {options.map((status) => (
+              {statuses.map((status) => (
                 <button
                   key={status}
                   className={`status-button ${status.toLowerCase()}`}
@@ -306,17 +446,26 @@ export default function AttendanceRegister({
       </div>
 
       <div className="save-section">
-        <button
-          className="primary-button"
-          disabled={!complete || !hasChanges}
-          onClick={saveAttendance}
-        >
-          Save attendance
-        </button>
+        <div className="action-buttons">
+          <button
+            className="primary-button"
+            disabled={!complete || !hasChanges}
+            onClick={saveAttendance}
+          >
+            Save attendance
+          </button>
+          <button
+            className="secondary-button"
+            disabled={!complete || hasChanges}
+            onClick={exportCsv}
+          >
+            Download CSV
+          </button>
+        </div>
 
         {!complete && (
           <p className="selection-message">
-            Mark every student to enable saving.
+            Mark every student to enable confirmation and CSV export.
           </p>
         )}
 
@@ -326,8 +475,8 @@ export default function AttendanceRegister({
       </div>
 
       <p className="storage-note">
-        Saved on this browser and device only. School syncing is not
-        connected yet.
+        Saved in this browser on this device only. Clearing site data
+        can remove records. School syncing is not connected yet.
       </p>
     </section>
   )

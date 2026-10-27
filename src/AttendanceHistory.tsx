@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { Student } from './schoolData'
 
 type Status = 'Present' | 'Absent' | 'Late'
 
@@ -9,8 +10,20 @@ type SavedRegister = {
 
 type Props = {
   className: string
-  students: { id: string; name: string }[]
+  students: Student[]
   onBack: () => void
+}
+
+// Require a real calendar date, not just a string shaped like a date.
+function isValidDate(date: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false
+
+  const parsed = new Date(`${date}T12:00:00Z`)
+
+  return (
+    !Number.isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === date
+  )
 }
 
 function loadHistory(className: string) {
@@ -22,14 +35,13 @@ function loadHistory(className: string) {
     for (let index = 0; index < localStorage.length; index++) {
       const key = localStorage.key(index)
 
-      if (!key?.startsWith(prefix)) continue
+      // Drafts are unfinished work and must never appear as confirmed history.
+      if (!key?.startsWith(prefix) || key.endsWith(':draft')) continue
 
       try {
         const date = key.slice(prefix.length)
 
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-          throw new Error('Invalid date')
-        }
+        if (!isValidDate(date)) throw new Error('Invalid date')
 
         const parsed: unknown = JSON.parse(
           localStorage.getItem(key) ?? 'null',
@@ -59,6 +71,7 @@ function loadHistory(className: string) {
 
         registers.push({ date, attendance })
       } catch {
+        // One damaged record should not prevent other registers from loading.
         error = 'Some saved registers could not be read.'
       }
     }
@@ -66,6 +79,7 @@ function loadHistory(className: string) {
     error = 'Could not access saved history in this browser.'
   }
 
+  // ISO date strings sort correctly, with the most recent school day first.
   registers.sort((a, b) => b.date.localeCompare(a.date))
 
   return { registers, error }
@@ -106,7 +120,7 @@ export default function AttendanceHistory({
 
       {registers.length === 0 && !error && (
         <p className="subtitle">
-          No saved registers yet. Save attendance to see it here.
+          No confirmed registers yet. Save attendance to see it here.
         </p>
       )}
 
@@ -128,18 +142,27 @@ export default function AttendanceHistory({
         <section aria-label="Saved attendance">
           <h2>{formatDate(selected.date)}</h2>
           <p className="selection-message">
-            View only · These are the saved attendance marks.
+            View only · Confirmed attendance marks.
           </p>
 
           <div className="student-list">
-            {students.map((student) => (
-              <div className="student-row" key={student.id}>
-                <strong>{student.name}</strong>
-                <span>
-                  {selected.attendance[student.id] ?? 'Not marked'}
-                </span>
-              </div>
-            ))}
+            {students.map((student) => {
+              const status = selected.attendance[student.id]
+
+              return (
+                <div className="student-row" key={student.id}>
+                  <div>
+                    <strong>{student.name}</strong>
+                    <span className="student-count">
+                      Student {student.id}
+                    </span>
+                  </div>
+                  <span className={`history-status ${status?.toLowerCase() ?? ''}`}>
+                    {status ?? 'Not marked'}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </section>
       )}

@@ -1,12 +1,14 @@
 import { useState } from 'react'
-import './App.css'
 import AttendanceRegister from './AttendanceRegister'
 import { classes } from './schoolData'
+import './App.css'
 
-function App() {
+export default function App() {
   const [selectedClass, setSelectedClass] = useState<string | null>(null)
 
-    if (selectedClass) {
+  // A new component instance is created for each class so attendance state
+  // cannot carry over accidentally when switching classes.
+  if (selectedClass) {
     return (
       <main className="neera">
         <AttendanceRegister
@@ -21,7 +23,9 @@ function App() {
   return (
     <main className="neera">
       <header className="header">
-        <a className="brand" href="/">neera<span>.</span></a>
+        <span className="brand">
+          neera<span>.</span>
+        </span>
         <span className="demo-badge">Teacher demo</span>
       </header>
 
@@ -34,10 +38,8 @@ function App() {
       </section>
 
       <section className="register" aria-labelledby="class-heading">
-        <div className="section-heading">
-          <h2 id="class-heading">Your classes</h2>
-          <p>Choose a class to get started.</p>
-        </div>
+        <h2 id="class-heading">Your classes</h2>
+        <p className="muted">Choose a class to get started.</p>
 
         <div className="class-list">
           {classes.map((schoolClass) => (
@@ -45,7 +47,6 @@ function App() {
               key={schoolClass.name}
               className="class-card"
               onClick={() => setSelectedClass(schoolClass.name)}
-              aria-pressed={selectedClass === schoolClass.name}
             >
               <span>
                 <strong>{schoolClass.name}</strong>
@@ -57,19 +58,9 @@ function App() {
             </button>
           ))}
         </div>
-
-        <p className="selection-message" role="status">
-          {selectedClass
-            ? `${selectedClass} selected. We'll build its register next.`
-            : 'Select one of the sample classes above.'}
-        </p>
       </section>
 
-      <footer>
-        Built for teachers. Made for continuity.
-      </footer>
+      <footer>Built for teachers. Made for continuity.</footer>
     </main>
   )
 }
-
-export default App

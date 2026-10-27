@@ -1,3 +1,4 @@
+// Shared types keep the home screen and register using the same data shape.
 export type Student = {
   id: string
   name: string
@@ -8,6 +9,8 @@ export type SchoolClass = {
   students: Student[]
 }
 
+// Fictional development data. Keep IDs stable because attendance uses them
+// to identify students, even if a student's display name changes.
 export const classes: SchoolClass[] = [
   {
     name: 'Primary 5',
