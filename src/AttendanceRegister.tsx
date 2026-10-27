@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import AttendanceHistory from './AttendanceHistory'
+import { classes } from './schoolData'
+import type { Student } from './schoolData'
+
 
 type Status = 'Present' | 'Absent' | 'Late'
 type Attendance = Record<string, Status>
@@ -8,13 +11,6 @@ type Props = {
   className: string
   onBack: () => void
 }
-
-const students = [
-  { id: '001', name: 'Amina Nakato' },
-  { id: '002', name: 'Daniel Kato' },
-  { id: '003', name: 'Grace Namuli' },
-  { id: '004', name: 'Samuel Okello' },
-]
 
 const options: Status[] = ['Present', 'Absent', 'Late']
 
@@ -29,7 +25,7 @@ function getToday() {
 }
 
 // Check stored data before using it.
-function readAttendance(key: string): {
+function readAttendance(key: string, students: Student[]): {
   attendance: Attendance
   message: string
 } {
@@ -85,10 +81,12 @@ export default function AttendanceRegister({
   className,
   onBack,
 }: Props) {
+  const students = classes.find((schoolClass) => schoolClass.name === className)
+      ?.students ?? []  
   const [date] = useState(getToday)
-  const storageKey = `neera:attendance:v1:${className}:${date}`
+  const storageKey = `neera:attendance:v2:${className}:${date}`
 
-  const [initial] = useState(() => readAttendance(storageKey))
+  const [initial] = useState(() => readAttendance(storageKey, students))
   const [attendance, setAttendance] = useState<Attendance>(
     initial.attendance,
   )
@@ -203,8 +201,10 @@ export default function AttendanceRegister({
           View saved history →
         </button>
       </div>
-
-      <p className="eyebrow">SAMPLE REGISTER · 4 DEMO STUDENTS</p>
+      
+      <p className="eyebrow">
+        SAMPLE REGISTER · {students.length} DEMO STUDENTS
+      </p>
       <h1>{className}</h1>
 
       <p className="subtitle">

@@ -84,6 +84,11 @@ the home screen are illustrative.
 - Successfully built the project.
 - Initialised Git version control.
 
+### 27 October 2026
+- Added separate fictional class rosters and calculated student counts.
+- Updated attendance loading to use the selected class roster.
+- Started a separate v2 store for the updated demo registers.
+
 ## Author
 
 Daisy Juliana Babirye

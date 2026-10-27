@@ -1,12 +1,7 @@
 import { useState } from 'react'
 import './App.css'
 import AttendanceRegister from './AttendanceRegister'
-
-const classes = [
-  { name: 'Primary 5', students: 72 },
-  { name: 'Primary 6', students: 68 },
-  { name: 'Primary 7', students: 81 },
-]
+import { classes } from './schoolData'
 
 function App() {
   const [selectedClass, setSelectedClass] = useState<string | null>(null)
@@ -55,7 +50,7 @@ function App() {
               <span>
                 <strong>{schoolClass.name}</strong>
                 <span className="student-count">
-                  {schoolClass.students} students
+                  {schoolClass.students.length} students
                 </span>
               </span>
               <span aria-hidden="true">→</span>

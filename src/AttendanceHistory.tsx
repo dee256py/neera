@@ -16,7 +16,7 @@ type Props = {
 function loadHistory(className: string) {
   const registers: SavedRegister[] = []
   let error = ''
-  const prefix = `neera:attendance:v1:${className}:`
+  const prefix = `neera:attendance:v2:${className}:`
 
   try {
     for (let index = 0; index < localStorage.length; index++) {
