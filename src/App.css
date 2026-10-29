@@ -351,3 +351,23 @@ footer {
     flex: 1 1 180px;
   }
 }
+
+/* Keep app status visible without covering most of the register. */
+.pwa-notice {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 100;
+  width: min(380px, calc(100vw - 32px));
+  padding: 20px;
+  border: 1px solid #b9c9b9;
+  border-radius: 16px;
+  background: #fff;
+  color: #183c32;
+  box-shadow: 0 8px 32px rgb(24 60 50 / 15%);
+}
+
+.pwa-notice p {
+  margin: 0 0 16px;
+  line-height: 1.6;
+}

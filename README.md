@@ -89,6 +89,12 @@ the home screen are illustrative.
 - Updated attendance loading to use the selected class roster.
 - Started a separate v2 store for the updated demo registers.
 
+### 29 October 2026
+- Added service worker caching for offline app reopening.
+- Added offline-ready and app-update notifications.
+- Verified offline refresh, draft recovery, attendance confirmation and history.
+- Offline use requires an initial successful load and cache setup.
+
 ## Author
 
 Daisy Juliana Babirye
