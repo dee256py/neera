@@ -397,3 +397,9 @@ footer {
 .restore-preview { margin-top: 24px; padding-top: 16px; border-top: 1px solid #dce3d9; }
 .restore-preview details { margin: 16px 0; max-height: 280px; overflow: auto; }
 .restore-preview li { margin-bottom: 8px; overflow-wrap: anywhere; }
+
+/* Use visible labels and generous spacing for account forms. */
+.account-form { display: grid; gap: 12px; max-width: 580px; }
+.account-form h2 { margin-bottom: 4px; }
+.account-form label { font-weight: 600; }
+.account-form button { margin-top: 8px; justify-self: start; }

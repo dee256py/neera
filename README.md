@@ -28,6 +28,10 @@ Early prototype using fictional student data.
 - Historical student roster snapshots
 - JSON backups containing confirmed registers and drafts
 - Restore previews that skip existing class/day records
+- Local school accounts with admin and teacher roles
+- Admin-created teacher accounts
+- Login/logout using server-side sessions and HttpOnly cookies
+- Server-enforced school isolation and account permissions
 
 ### Planned features
 - Student search and attendance filters
@@ -106,6 +110,10 @@ the home screen are illustrative.
 - Added roster snapshots and JSON backup/restore.
 - Passed 18 storage tests and manually verified backup downloads,
   conflict previews and restoration in a separate browser origin.
+  - Added the Express/SQLite account backend and school login screen.
+- Added 13 API integration tests.
+- Manually verified admin/teacher login, logout and account permissions.
+- Attendance remains separate demo data pending school-specific syncing.
 
 ## Author
 

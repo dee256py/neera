@@ -3,6 +3,9 @@ import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  // Proxy /api through the frontend origin so session cookies work locally.
+  server: { proxy: { '/api': 'http://127.0.0.1:3001' } },
+  preview: { proxy: { '/api': 'http://127.0.0.1:3001' } },
   plugins: [
     react(),
 
@@ -37,6 +40,8 @@ export default defineConfig({
         // Cache the built app files so navigation works without internet.
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
         navigateFallback: 'index.html',
+        // Never serve cached app HTML for account/API requests.
+        navigateFallbackDenylist: [/^\/api(?:\/|$)/],
 
         // Remove obsolete application caches after an update.
         // This does not clear attendance stored in localStorage.

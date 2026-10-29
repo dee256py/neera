@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import AttendanceRegister from './AttendanceRegister'
 import SchoolOverview from './SchoolOverview'
+import SchoolAccounts from './SchoolAccounts'
 import BackupRestore from './BackupRestore'
 import { classes } from './schoolData'
 import './App.css'
@@ -10,6 +11,12 @@ export default function App() {
   const [showOverview, setShowOverview] = useState(false)
 
   const [showBackup, setShowBackup] = useState(false)
+
+  const [showAccounts, setShowAccounts] = useState(false)
+
+  if (showAccounts) {
+    return <main className="neera"><SchoolAccounts onBack={() => setShowAccounts(false)} /></main>
+  }
 
   if (showBackup) {
     return <main className="neera"><BackupRestore onBack={() => setShowBackup(false)} /></main>
@@ -43,6 +50,7 @@ export default function App() {
           neera<span>.</span>
         </span>
         <span className="demo-badge">Teacher demo</span>
+        <button className="secondary-button" onClick={() => setShowAccounts(true)}>School accounts</button>
       </header>
 
       <section className="intro">
