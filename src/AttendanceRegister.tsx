@@ -1,132 +1,13 @@
 import { useState } from 'react'
 import AttendanceHistory from './AttendanceHistory'
 import { classes } from './schoolData'
-import type { Student } from './schoolData'
+import { getToday, formatDate, loadRegister, saveRegister } from './attendanceStorage'
+import type { Status, Attendance } from './attendanceStorage'
 
-type Status = 'Present' | 'Absent' | 'Late'
-type Attendance = Record<string, Status>
-
-type Props = {
-  className: string
-  onBack: () => void
-}
-
-type ReadResult = {
-  attendance: Attendance
-  error: string
-}
-
+type Props = { className: string; onBack: () => void }
 type Filter = 'All' | 'Unmarked' | Status
-
 const statuses: Status[] = ['Present', 'Absent', 'Late']
 const filters: Filter[] = ['All', 'Unmarked', ...statuses]
-
-// Use the local calendar date instead of UTC, which can select the wrong
-// school day near midnight.
-function getToday() {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
-}
-
-function formatDate(date: string) {
-  return new Date(`${date}T12:00:00`).toLocaleDateString('en-GB', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
-}
-
-// Browser storage can contain outdated or invalid data. Validate it before
-// using it, and only load attendance belonging to the current roster.
-function readAttendance(key: string, students: Student[]): ReadResult {
-  try {
-    const raw = localStorage.getItem(key)
-
-    if (raw === null) return { attendance: {}, error: '' }
-
-    const parsed: unknown = JSON.parse(raw)
-
-    if (
-      typeof parsed !== 'object' ||
-      parsed === null ||
-      Array.isArray(parsed)
-    ) {
-      throw new Error('Invalid register')
-    }
-
-    const attendance: Attendance = {}
-
-    for (const student of students) {
-      const value = (parsed as Record<string, unknown>)[student.id]
-
-      if (value === undefined) continue
-
-      if (value !== 'Present' && value !== 'Absent' && value !== 'Late') {
-        throw new Error('Invalid attendance status')
-      }
-
-      attendance[student.id] = value
-    }
-
-    return { attendance, error: '' }
-  } catch {
-    return {
-      attendance: {},
-      error: 'Could not read saved attendance. Review the register carefully.',
-    }
-  }
-}
-
-function loadInitialAttendance(
-  storageKey: string,
-  draftKey: string,
-  students: Student[],
-) {
-  try {
-    // Recover unfinished changes before loading the last confirmed register.
-    if (localStorage.getItem(draftKey) !== null) {
-      const draft = readAttendance(draftKey, students)
-
-      if (!draft.error) {
-        return {
-          attendance: draft.attendance,
-          isDraft: true,
-          message: 'Recovered your unfinished draft. Review and save it.',
-        }
-      }
-
-      // A damaged draft should not hide a readable confirmed register.
-      const saved = readAttendance(storageKey, students)
-
-      return {
-        attendance: saved.attendance,
-        isDraft: false,
-        message:
-          'Could not recover the draft. ' +
-          (saved.error || 'Loaded confirmed attendance where available.'),
-      }
-    }
-
-    const saved = readAttendance(storageKey, students)
-
-    return {
-      attendance: saved.attendance,
-      isDraft: false,
-      message: saved.error,
-    }
-  } catch {
-    return {
-      attendance: {} as Attendance,
-      isDraft: false,
-      message: 'Could not access browser storage. Saving may be unavailable.',
-    }
-  }
-}
 
 // CSV fields must escape quotes. Prefix formula-like values so spreadsheet
 // apps treat them as text rather than executable formulas.
@@ -136,23 +17,16 @@ function csvCell(value: string) {
 }
 
 export default function AttendanceRegister({ className, onBack }: Props) {
-  const students =
-    classes.find((schoolClass) => schoolClass.name === className)
-      ?.students ?? []
-
   const [date] = useState(getToday)
-
-  // Drafts and confirmed registers have separate keys. History reads only
-  // confirmed keys, so unfinished work never appears as completed attendance.
-  const storageKey = `neera:attendance:v2:${className}:${date}`
-  const draftKey = `${storageKey}:draft`
-
-  const [initial] = useState(() =>
-    loadInitialAttendance(storageKey, draftKey, students),
-  )
-  const [attendance, setAttendance] = useState<Attendance>(initial.attendance)
-  const [message, setMessage] = useState(initial.message)
-  const [hasChanges, setHasChanges] = useState(initial.isDraft)
+  const [initial] = useState(() => loadRegister(className, date))
+  // Reopening an existing register uses its snapshot, not an edited roster.
+  const students = initial.record?.students ??
+    classes.find((schoolClass) => schoolClass.name === className)?.students ?? []
+  const rosterSource = initial.record?.rosterSource ?? 'captured'
+  const [attendance, setAttendance] = useState<Attendance>(initial.record?.attendance ?? {})
+  const [message, setMessage] = useState(initial.warnings.join(' ') ||
+    (initial.record?.kind === 'draft' ? 'Recovered your unfinished draft. Review and save it.' : ''))
+  const [hasChanges, setHasChanges] = useState(initial.record?.kind === 'draft')
   const [showHistory, setShowHistory] = useState(false)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<Filter>('All')
@@ -202,7 +76,7 @@ export default function AttendanceRegister({ className, onBack }: Props) {
 
     // Save immediately after each marking action, without requiring internet.
     try {
-      localStorage.setItem(draftKey, JSON.stringify(updated))
+      saveRegister({ className, date, kind: 'draft', students, attendance: updated, rosterSource })
       setMessage('Draft saved on this device. Not yet confirmed.')
     } catch {
       setMessage(
@@ -236,23 +110,12 @@ export default function AttendanceRegister({ className, onBack }: Props) {
     if (!complete) return
 
     try {
-      localStorage.setItem(storageKey, JSON.stringify(attendance))
-    } catch {
-      setMessage('Saving failed. Keep this page open and try again.')
-      return
-    }
-
-    setHasChanges(false)
-
-    // Only remove the draft after the confirmed register has been written.
-    try {
-      localStorage.removeItem(draftKey)
+      // Confirming and removing the draft are one atomic storage write.
+      saveRegister({ className, date, kind: 'confirmed', students, attendance, rosterSource })
+      setHasChanges(false)
       setMessage('Attendance confirmed and saved on this device.')
     } catch {
-      setMessage(
-        'Attendance confirmed, but the draft could not be cleared. ' +
-        'A draft recovery notice may appear when reopening.',
-      )
+      setMessage('Saving failed. Keep this page open. Check storage and older-record warnings, then retry.')
     }
   }
 
@@ -314,7 +177,6 @@ export default function AttendanceRegister({ className, onBack }: Props) {
     return (
       <AttendanceHistory
         className={className}
-        students={students}
         onBack={() => setShowHistory(false)}
       />
     )
@@ -339,6 +201,9 @@ export default function AttendanceRegister({ className, onBack }: Props) {
       </p>
       <h1>{className}</h1>
       <p className="subtitle">{formatDate(date)}</p>
+      {rosterSource === 'legacy-reconstructed' && (
+        <p className="selection-message">Older record: names were reconstructed from the current roster, not captured historically.</p>
+      )}
 
       <div className="attendance-summary" aria-label="Attendance totals">
         {statuses.map((status) => (

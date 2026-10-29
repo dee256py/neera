@@ -1,12 +1,19 @@
 import { useState } from 'react'
 import AttendanceRegister from './AttendanceRegister'
 import SchoolOverview from './SchoolOverview'
+import BackupRestore from './BackupRestore'
 import { classes } from './schoolData'
 import './App.css'
 
 export default function App() {
   const [selectedClass, setSelectedClass] = useState<string | null>(null)
   const [showOverview, setShowOverview] = useState(false)
+
+  const [showBackup, setShowBackup] = useState(false)
+
+  if (showBackup) {
+    return <main className="neera"><BackupRestore onBack={() => setShowBackup(false)} /></main>
+  }
 
   if (showOverview) {
     return (
@@ -50,6 +57,9 @@ export default function App() {
           onClick={() => setShowOverview(true)}
         >
           View school overview →
+        </button>
+        <button className="secondary-button backup-link" onClick={() => setShowBackup(true)}>
+          Backup &amp; restore
         </button>
       </section>
 

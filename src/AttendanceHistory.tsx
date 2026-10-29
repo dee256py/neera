@@ -1,102 +1,19 @@
 import { useState } from 'react'
-import type { Student } from './schoolData'
+import { listRegisters, formatDate } from './attendanceStorage'
 
-type Status = 'Present' | 'Absent' | 'Late'
-
-type SavedRegister = {
-  date: string
-  attendance: Record<string, Status>
-}
-
-type Props = {
-  className: string
-  students: Student[]
-  onBack: () => void
-}
-
-// Require a real calendar date, not just a string shaped like a date.
-function isValidDate(date: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false
-
-  const parsed = new Date(`${date}T12:00:00Z`)
-
-  return (
-    !Number.isNaN(parsed.getTime()) &&
-    parsed.toISOString().slice(0, 10) === date
-  )
-}
+type Props = { className: string; onBack: () => void }
 
 function loadHistory(className: string) {
-  const registers: SavedRegister[] = []
-  let error = ''
-  const prefix = `neera:attendance:v2:${className}:`
-
-  try {
-    for (let index = 0; index < localStorage.length; index++) {
-      const key = localStorage.key(index)
-
-      // Drafts are unfinished work and must never appear as confirmed history.
-      if (!key?.startsWith(prefix) || key.endsWith(':draft')) continue
-
-      try {
-        const date = key.slice(prefix.length)
-
-        if (!isValidDate(date)) throw new Error('Invalid date')
-
-        const parsed: unknown = JSON.parse(
-          localStorage.getItem(key) ?? 'null',
-        )
-
-        if (
-          typeof parsed !== 'object' ||
-          parsed === null ||
-          Array.isArray(parsed)
-        ) {
-          throw new Error('Invalid register')
-        }
-
-        const attendance: Record<string, Status> = {}
-
-        for (const [id, status] of Object.entries(parsed)) {
-          if (
-            status !== 'Present' &&
-            status !== 'Absent' &&
-            status !== 'Late'
-          ) {
-            throw new Error('Invalid status')
-          }
-
-          attendance[id] = status
-        }
-
-        registers.push({ date, attendance })
-      } catch {
-        // One damaged record should not prevent other registers from loading.
-        error = 'Some saved registers could not be read.'
-      }
-    }
-  } catch {
-    error = 'Could not access saved history in this browser.'
+  const data = listRegisters()
+  return {
+    registers: data.records.filter((row) => row.className === className && row.kind === 'confirmed')
+      .sort((a, b) => b.date.localeCompare(a.date)),
+    error: data.warnings.join(' '),
   }
-
-  // ISO date strings sort correctly, with the most recent school day first.
-  registers.sort((a, b) => b.date.localeCompare(a.date))
-
-  return { registers, error }
-}
-
-function formatDate(date: string) {
-  return new Date(`${date}T12:00:00`).toLocaleDateString('en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
 }
 
 export default function AttendanceHistory({
   className,
-  students,
   onBack,
 }: Props) {
   const [{ registers, error }] = useState(() => loadHistory(className))
@@ -143,10 +60,12 @@ export default function AttendanceHistory({
           <h2>{formatDate(selected.date)}</h2>
           <p className="selection-message">
             View only · Confirmed attendance marks.
+            {selected.rosterSource === 'legacy-reconstructed' &&
+              ' Older record: names reconstructed from the current roster; historical names were not stored.'}
           </p>
 
           <div className="student-list">
-            {students.map((student) => {
+            {selected.students.map((student) => {
               const status = selected.attendance[student.id]
 
               return (

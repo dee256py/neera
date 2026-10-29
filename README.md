@@ -24,6 +24,10 @@ Early prototype using fictional student data.
 - School overview of today's confirmed attendance on this device
 - Class confirmation status and attendance coverage
 - Absent-student list from confirmed registers
+- Shared attendance storage and validation
+- Historical student roster snapshots
+- JSON backups containing confirmed registers and drafts
+- Restore previews that skip existing class/day records
 
 ### Planned features
 - Student search and attendance filters
@@ -98,6 +102,10 @@ the home screen are illustrative.
 - Verified offline refresh, draft recovery, attendance confirmation and history.
 - Offline use requires an initial successful load and cache setup.
 - Built the school overview and verified that drafts stay separate from confirmed attendance totals.
+- Centralised attendance storage while preserving older v2 records.
+- Added roster snapshots and JSON backup/restore.
+- Passed 18 storage tests and manually verified backup downloads,
+  conflict previews and restoration in a separate browser origin.
 
 ## Author
 

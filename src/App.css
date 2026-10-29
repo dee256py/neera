@@ -388,3 +388,12 @@ footer {
   font-size: 14px;
   font-weight: 600;
 }
+/* Keep data management separate from the teacher's daily marking flow. */
+.backup-link { margin: 12px 0 0 12px; }
+.backup-panel { margin: 24px 0; padding: 24px; background: white; border: 1px solid #dce3d9; border-radius: 16px; }
+.backup-panel h2 { margin-top: 0; }
+.backup-panel p { line-height: 1.7; }
+.backup-panel input[type="file"] { max-width: 100%; padding: 12px 0; }
+.restore-preview { margin-top: 24px; padding-top: 16px; border-top: 1px solid #dce3d9; }
+.restore-preview details { margin: 16px 0; max-height: 280px; overflow: auto; }
+.restore-preview li { margin-bottom: 8px; overflow-wrap: anywhere; }

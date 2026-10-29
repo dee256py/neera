@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { classes } from './schoolData'
 import type { Student } from './schoolData'
-
-type Status = 'Present' | 'Absent' | 'Late'
+import { listRegisters, getToday } from './attendanceStorage'
 
 type ClassSummary = {
   name: string
@@ -17,26 +16,17 @@ type Props = {
   onBack: () => void
 }
 
-function getToday() {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
-}
-
-function isStatus(value: unknown): value is Status {
-  return value === 'Present' || value === 'Absent' || value === 'Late'
-}
-
 function loadOverview() {
   const date = getToday()
   const summaries: ClassSummary[] = []
+  const data = listRegisters()
+  // Include restored classes even when they are no longer in the demo roster.
+  const names = [...new Set([...classes.map((row) => row.name),
+    ...data.records.filter((row) => row.date === date).map((row) => row.className)])]
 
-  for (const schoolClass of classes) {
+  for (const name of names) {
     const summary: ClassSummary = {
-      name: schoolClass.name,
+      name,
       state: 'Not confirmed',
       present: 0,
       absent: 0,
@@ -44,57 +34,26 @@ function loadOverview() {
       absentStudents: [],
     }
 
-    try {
-      // Read confirmed records only. An unfinished draft is not a submission.
-      const key = `neera:attendance:v2:${schoolClass.name}:${date}`
-      const raw = localStorage.getItem(key)
-
-      if (raw !== null) {
-        const parsed: unknown = JSON.parse(raw)
-
-        if (
-          typeof parsed !== 'object' ||
-          parsed === null ||
-          Array.isArray(parsed)
-        ) {
-          throw new Error('Invalid register')
-        }
-
-        const attendance = parsed as Record<string, unknown>
-
-        // Count a register only when every student in its roster has
-        // a valid mark. Incomplete or damaged records need review.
-        const complete =
-          schoolClass.students.length > 0 &&
-          schoolClass.students.every((student) =>
-            isStatus(attendance[student.id]),
-          )
-
-        if (!complete) throw new Error('Incomplete register')
-
-        summary.state = 'Confirmed'
-
-        for (const student of schoolClass.students) {
-          const status = attendance[student.id]
-
-          if (status === 'Present') summary.present += 1
-          if (status === 'Late') summary.late += 1
-
-          if (status === 'Absent') {
-            summary.absent += 1
-            summary.absentStudents.push(student)
-          }
+    const record = data.records.find((row) => row.className === name && row.date === date && row.kind === 'confirmed')
+    if (record) {
+      summary.state = 'Confirmed'
+      for (const student of record.students) {
+        const status = record.attendance[student.id]
+        if (status === 'Present') summary.present += 1
+        if (status === 'Late') summary.late += 1
+        if (status === 'Absent') {
+          summary.absent += 1
+          summary.absentStudents.push(student)
         }
       }
-    } catch {
-      // Never present unreadable records as zero absences or confirmed data.
+    } else if (data.warnings.length) {
       summary.state = 'Needs review'
     }
 
     summaries.push(summary)
   }
 
-  return { date, summaries }
+  return { date, summaries, warnings: data.warnings }
 }
 
 export default function SchoolOverview({ onBack }: Props) {
@@ -114,10 +73,10 @@ export default function SchoolOverview({ onBack }: Props) {
   )
 
   const confirmedStudents = totals.present + totals.absent + totals.late
-  const totalStudents = classes.reduce(
-    (total, schoolClass) => total + schoolClass.students.length,
-    0,
-  )
+  const totalStudents = overview.summaries.reduce((total, summary) => {
+    if (summary.state === 'Confirmed') return total + summary.present + summary.absent + summary.late
+    return total + (classes.find((row) => row.name === summary.name)?.students.length ?? 0)
+  }, 0)
 
   const dateLabel = new Date(
     `${overview.date}T12:00:00`,
@@ -147,8 +106,9 @@ export default function SchoolOverview({ onBack }: Props) {
       <h1>Today at a glance.</h1>
       <p className="subtitle">{dateLabel}</p>
 
+      {overview.warnings.length > 0 && <p role="alert">{overview.warnings.join(' ')}</p>}
       <p className="overview-coverage" role="status">
-        {confirmed.length} of {classes.length} classes confirmed ·{' '}
+        {confirmed.length} of {overview.summaries.length} classes confirmed ·{' '}
         {confirmedStudents} of {totalStudents} students covered
       </p>
 
