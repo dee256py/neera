@@ -1,13 +1,22 @@
 import { useState } from 'react'
 import AttendanceRegister from './AttendanceRegister'
+import SchoolOverview from './SchoolOverview'
 import { classes } from './schoolData'
 import './App.css'
 
 export default function App() {
   const [selectedClass, setSelectedClass] = useState<string | null>(null)
+  const [showOverview, setShowOverview] = useState(false)
 
-  // A new component instance is created for each class so attendance state
-  // cannot carry over accidentally when switching classes.
+  if (showOverview) {
+    return (
+      <main className="neera">
+        <SchoolOverview onBack={() => setShowOverview(false)} />
+      </main>
+    )
+  }
+
+  // Remount the register when switching classes so their state stays separate.
   if (selectedClass) {
     return (
       <main className="neera">
@@ -35,6 +44,13 @@ export default function App() {
         <p className="subtitle">
           A simpler way to take attendance and keep learning going.
         </p>
+
+        <button
+          className="secondary-button"
+          onClick={() => setShowOverview(true)}
+        >
+          View school overview →
+        </button>
       </section>
 
       <section className="register" aria-labelledby="class-heading">

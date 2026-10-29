@@ -21,6 +21,9 @@ Early prototype using fictional student data.
 - Attendance saved locally in the browser
 - Read-only attendance history
 - Warning before leaving a register with unsaved changes
+- School overview of today's confirmed attendance on this device
+- Class confirmation status and attendance coverage
+- Absent-student list from confirmed registers
 
 ### Planned features
 - Student search and attendance filters
@@ -94,6 +97,7 @@ the home screen are illustrative.
 - Added offline-ready and app-update notifications.
 - Verified offline refresh, draft recovery, attendance confirmation and history.
 - Offline use requires an initial successful load and cache setup.
+- Built the school overview and verified that drafts stay separate from confirmed attendance totals.
 
 ## Author
 
