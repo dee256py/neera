@@ -35,5 +35,29 @@ export function openDatabase(path) {
     INSERT OR IGNORE INTO schema_migrations(version) VALUES (1);
     COMMIT;
   `)
+  db.exec(`
+    BEGIN;
+    CREATE TABLE IF NOT EXISTS school_classes (
+      id TEXT PRIMARY KEY, school_id TEXT NOT NULL REFERENCES schools(id),
+      name TEXT NOT NULL, students_json TEXT NOT NULL, roster_version INTEGER NOT NULL DEFAULT 1,
+      UNIQUE(school_id,name)
+    );
+    CREATE TABLE IF NOT EXISTS class_teachers (
+      class_id TEXT NOT NULL REFERENCES school_classes(id), user_id TEXT NOT NULL REFERENCES users(id),
+      PRIMARY KEY(class_id,user_id)
+    );
+    CREATE TABLE IF NOT EXISTS school_registers (
+      class_id TEXT NOT NULL REFERENCES school_classes(id), date TEXT NOT NULL,
+      version INTEGER NOT NULL, record_json TEXT NOT NULL, updated_by TEXT NOT NULL REFERENCES users(id),
+      PRIMARY KEY(class_id,date)
+    );
+    CREATE TABLE IF NOT EXISTS register_mutations (
+      id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
+      class_id TEXT NOT NULL REFERENCES school_classes(id), date TEXT NOT NULL,
+      payload_hash TEXT NOT NULL, response_json TEXT NOT NULL
+    );
+    INSERT OR IGNORE INTO schema_migrations(version) VALUES (2);
+    COMMIT;
+  `)
   return db
 }

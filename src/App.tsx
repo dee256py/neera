@@ -2,6 +2,7 @@ import { useState } from 'react'
 import AttendanceRegister from './AttendanceRegister'
 import SchoolOverview from './SchoolOverview'
 import SchoolAccounts from './SchoolAccounts'
+import SchoolWorkspace from './SchoolWorkspace'
 import BackupRestore from './BackupRestore'
 import { classes } from './schoolData'
 import './App.css'
@@ -14,8 +15,14 @@ export default function App() {
 
   const [showAccounts, setShowAccounts] = useState(false)
 
+  const [showSchool, setShowSchool] = useState(false)
+
+  if (showSchool) {
+    return <main className="neera"><SchoolWorkspace onBack={() => setShowSchool(false)} onLogin={() => { setShowSchool(false); setShowAccounts(true) }} /></main>
+  }
+
   if (showAccounts) {
-    return <main className="neera"><SchoolAccounts onBack={() => setShowAccounts(false)} /></main>
+    return <main className="neera"><SchoolAccounts onBack={() => setShowAccounts(false)} onOpenSchool={() => { setShowAccounts(false); setShowSchool(true) }} /></main>
   }
 
   if (showBackup) {
@@ -49,8 +56,8 @@ export default function App() {
         <span className="brand">
           neera<span>.</span>
         </span>
-        <span className="demo-badge">Teacher demo</span>
-        <button className="secondary-button" onClick={() => setShowAccounts(true)}>School accounts</button>
+        <span className="demo-badge">Separate demo</span>
+        <div className="action-buttons"><button className="primary-button" onClick={() => setShowSchool(true)}>School workspace</button><button className="secondary-button" onClick={() => setShowAccounts(true)}>School accounts</button></div>
       </header>
 
       <section className="intro">

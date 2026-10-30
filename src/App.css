@@ -403,3 +403,9 @@ footer {
 .account-form h2 { margin-bottom: 4px; }
 .account-form label { font-weight: 600; }
 .account-form button { margin-top: 8px; justify-self: start; }
+
+/* Admin controls wrap on phones; teachers retain the simple marking layout. */
+.roster-edit-row { display: flex; align-items: center; gap: 8px; margin: 12px 0; }
+.roster-edit-row input { min-width: 0; flex: 1; }
+.record-comparison { max-height: 320px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: #f6f7f2; padding: 16px; }
+.history-list { margin-top: 20px; }

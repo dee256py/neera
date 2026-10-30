@@ -1,4 +1,5 @@
 import express from 'express'
+import { installSchoolRoutes } from './schoolRecords.mjs'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { normaliseEmail, validName, validPassword, hashPassword, verifyPassword, tokenHash, publicUser } from './accounts.mjs'
 
@@ -42,7 +43,7 @@ export function createApp(db, { now = Date.now } = {}) {
     if (!req.is('application/json')) return res.status(415).json({ error: 'Send JSON.' })
     next()
   })
-  app.use(express.json({ limit: '16kb' }))
+  app.use(express.json({ limit: '512kb' }))
 
   app.get('/api/health', (_req, res) => {
     db.prepare('SELECT 1').get()
@@ -51,9 +52,10 @@ export function createApp(db, { now = Date.now } = {}) {
 
   function authenticated(req, res, next) {
     const token = cookieToken(req)
-    const session = token && db.prepare('SELECT user_id FROM sessions WHERE token_hash=? AND expires_at>?')
+    const session = token && db.prepare('SELECT user_id,expires_at FROM sessions WHERE token_hash=? AND expires_at>?')
       .get(tokenHash(token), now())
     if (!session) return res.status(401).json({ error: 'Sign in to continue.' })
+    req.sessionExpiresAt = session.expires_at
     req.account = db.prepare(`${USER_QUERY} WHERE u.id=?`).get(session.user_id)
     if (!req.account) return res.status(401).json({ error: 'Sign in to continue.' })
     next()
@@ -91,10 +93,10 @@ export function createApp(db, { now = Date.now } = {}) {
     db.prepare('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES (?,?,?)')
       .run(tokenHash(token), row.id, now() + SESSION_MS)
     res.cookie(COOKIE, token, { ...cookieOptions, maxAge: SESSION_MS })
-    res.json({ user: publicUser(row) })
+    res.json({ user: publicUser(row), expiresAt: now() + SESSION_MS })
   })
 
-  app.get('/api/auth/me', authenticated, (req, res) => res.json({ user: publicUser(req.account) }))
+  app.get('/api/auth/me', authenticated, (req, res) => res.json({ user: publicUser(req.account), expiresAt: req.sessionExpiresAt }))
   app.post('/api/auth/logout', (req, res) => {
     const token = cookieToken(req)
     if (token) db.prepare('DELETE FROM sessions WHERE token_hash=?').run(tokenHash(token))
@@ -129,6 +131,8 @@ export function createApp(db, { now = Date.now } = {}) {
     const row = db.prepare(`${USER_QUERY} WHERE u.id=?`).get(id)
     res.status(201).json({ user: publicUser(row) })
   })
+
+  installSchoolRoutes(app, db, authenticated, adminOnly)
 
   app.use('/api', (_req, res) => res.status(404).json({ error: 'API endpoint not found.' }))
   // Four arguments are required for Express to recognise an error handler.

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
+import { rememberSchoolSession, forgetSchoolSession } from './schoolApi'
 type User = { id: string; name: string; email: string; role: 'admin' | 'teacher'; schoolId: string; schoolName: string }
-type Props = { onBack: () => void }
+type Props = { onBack: () => void; onOpenSchool: () => void }
 
 async function request<T>(path: string, body?: object): Promise<T> {
   const response = await fetch(`/api${path}`, {
@@ -14,7 +15,7 @@ async function request<T>(path: string, body?: object): Promise<T> {
   return data as T
 }
 
-export default function SchoolAccounts({ onBack }: Props) {
+export default function SchoolAccounts({ onBack, onOpenSchool }: Props) {
   const [user, setUser] = useState<User | null>(null)
   const [users, setUsers] = useState<User[]>([])
   const [email, setEmail] = useState('')
@@ -33,8 +34,9 @@ export default function SchoolAccounts({ onBack }: Props) {
         const response = await fetch('/api/auth/me', { credentials: 'same-origin', cache: 'no-store' })
         if (response.status === 401) return
         if (!response.ok) throw new Error('Session check failed.')
-        const data = await response.json() as { user: User }
+        const data = await response.json() as { user: User; expiresAt: number }
         if (!active) return
+        rememberSchoolSession(data)
         setUser(data.user)
         if (data.user.role === 'admin') {
           const result = await request<{ users: User[] }>('/users')
@@ -51,7 +53,8 @@ export default function SchoolAccounts({ onBack }: Props) {
   async function login(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setMessage('')
     try {
-      const result = await request<{ user: User }>('/auth/login', { email, password })
+      const result = await request<{ user: User; expiresAt: number }>('/auth/login', { email, password })
+      rememberSchoolSession(result)
       setUser(result.user); setPassword('')
       if (result.user.role === 'admin') setUsers((await request<{ users: User[] }>('/users')).users)
       setMessage('Signed in successfully.')
@@ -62,6 +65,7 @@ export default function SchoolAccounts({ onBack }: Props) {
     setBusy(true)
     try {
       await request('/auth/logout', {})
+      forgetSchoolSession()
       setUser(null); setUsers([]); setTeacherPassword('')
       setMessage('Signed out. Your server session has been revoked.')
     } catch { setMessage('Sign out could not reach the API. Reconnect and retry; your session may still be active.') }
@@ -81,10 +85,10 @@ export default function SchoolAccounts({ onBack }: Props) {
   return (
     <section className="attendance">
       <button className="back-button" onClick={onBack}>← Back to demo</button>
-      <p className="eyebrow">LOCAL ACCOUNT DEVELOPMENT</p>
+      <p className="eyebrow">SCHOOL ACCOUNTS</p>
       <h1>School accounts.</h1>
       <p className="subtitle">Initial admin accounts are created using the local setup command.</p>
-      <p className="overview-coverage">Attendance screens still use demo data on this device. Account-specific attendance and school syncing are the next step.</p>
+      <p className="overview-coverage">Open your school workspace for assigned classes and school attendance. The separate demo remains available from the home screen.</p>
       {busy && <p role="status">Working…</p>}
       {!user ? (
         <form className="backup-panel account-form" onSubmit={login}>
@@ -101,7 +105,7 @@ export default function SchoolAccounts({ onBack }: Props) {
             <h2>{user.schoolName}</h2>
             <p>Signed in as {user.name} · {user.role === 'admin' ? 'School admin' : 'Teacher'}</p>
             <p>{user.email}</p>
-            <button className="secondary-button" disabled={busy} onClick={logout}>Sign out</button>
+            <div className="action-buttons"><button className="primary-button" disabled={busy} onClick={onOpenSchool}>Open school workspace</button><button className="secondary-button" disabled={busy} onClick={logout}>Sign out</button></div>
           </section>
           {user.role === 'admin' ? (
             <>
@@ -123,11 +127,11 @@ export default function SchoolAccounts({ onBack }: Props) {
                 </div>
               ))}</div>
             </>
-          ) : <p className="selection-message">Teacher account ready. Managing school accounts is restricted to admins.</p>}
+          ) : <p className="selection-message">Teacher account ready. Open the school workspace to see your assigned classes.</p>}
         </>
       )}
       <p className="selection-message" role="status">{message}</p>
-      <p className="storage-note">Account access requires the API. Passwords are hashed on the server and session tokens use HttpOnly cookies. This is a local development checkpoint; the demo attendance is not protected by school login yet.</p>
+      <p className="storage-note">Account access requires the API. Passwords are hashed on the server and session tokens use HttpOnly cookies. School workspace records are separate from the public demo. Account administration requires the local API.</p>
     </section>
   )
 }
