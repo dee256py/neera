@@ -59,5 +59,9 @@ export function openDatabase(path) {
     INSERT OR IGNORE INTO schema_migrations(version) VALUES (2);
     COMMIT;
   `)
+  db.exec(`CREATE TABLE IF NOT EXISTS school_calendars (
+    school_id TEXT NOT NULL REFERENCES schools(id), year INTEGER NOT NULL,
+    version INTEGER NOT NULL, data_json TEXT NOT NULL, PRIMARY KEY(school_id,year)
+  );`)
   return db
 }

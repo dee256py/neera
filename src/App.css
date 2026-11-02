@@ -417,3 +417,5 @@ footer {
 .report-table { width: 100%; border-collapse: collapse; text-align: left; }
 .report-table th, .report-table td { padding: .75rem; border-bottom: 1px solid #cad5c9; }
 .report-table caption { text-align: left; padding: .75rem 0; }
+
+.calendar-editor { border: 0; padding: 0; min-width: 0; }

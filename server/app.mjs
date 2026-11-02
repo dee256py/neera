@@ -1,4 +1,5 @@
 import express from 'express'
+import { installCalendarRoutes } from './schoolCalendar.mjs'
 import { installSchoolRoutes } from './schoolRecords.mjs'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { normaliseEmail, validName, validPassword, hashPassword, verifyPassword, tokenHash, publicUser } from './accounts.mjs'
@@ -133,6 +134,7 @@ export function createApp(db, { now = Date.now } = {}) {
   })
 
   installSchoolRoutes(app, db, authenticated, adminOnly)
+  installCalendarRoutes(app, db, authenticated, adminOnly)
 
   app.use('/api', (_req, res) => res.status(404).json({ error: 'API endpoint not found.' }))
   // Four arguments are required for Express to recognise an error handler.

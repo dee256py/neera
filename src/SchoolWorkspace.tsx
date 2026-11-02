@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import SchoolRegister from './SchoolRegister'
 import SchoolReports from './SchoolReports'
+import SchoolCalendarPanel from './SchoolCalendarPanel'
+import type { SchoolCalendar } from './ugandaCalendar'
 import { schoolApi, openSchoolSession, SchoolApiError, forgetMatchingSchoolSession } from './schoolApi'
 import type { SchoolSession, SchoolClass, SchoolUser } from './schoolApi'
 import { syncSchool } from './schoolSync'
@@ -40,6 +42,8 @@ function ManageClass({ cls, teachers, disabled, save }: {
 }
 
 export default function SchoolWorkspace({ onBack, onLogin }: Props) {
+  const [calendars, setCalendars] = useState<SchoolCalendar[]>([])
+  const [calendarRefresh, setCalendarRefresh] = useState(0)
   const [session, setSession] = useState<SchoolSession | null>(null)
   const [data, setData] = useState<SchoolData | null>(null)
   const [teachers, setTeachers] = useState<SchoolUser[]>([])
@@ -100,6 +104,7 @@ export default function SchoolWorkspace({ onBack, onLogin }: Props) {
     try {
       if (action) await action()
       const result = await syncSchool(session)
+      setCalendarRefresh(n => n + 1)
       setSession(result.session); setData(readSchoolData(result.session)); setOffline(false)
       if (result.session.user.role === 'admin') {
         const result = await schoolApi<{ users: SchoolUser[] }>('/users')
@@ -179,7 +184,10 @@ export default function SchoolWorkspace({ onBack, onLogin }: Props) {
         <h2>{session.user.role === 'admin' ? 'School classes' : 'Your assigned classes'}</h2>
         {data.classes.length === 0 && <p>{session.user.role === 'admin' ? 'Create your first class below.' : 'No assigned classes yet. Ask your school admin to assign one.'}</p>}
         <div className="class-list">{data.classes.map((cls) => <button className="class-card" key={cls.id} onClick={() => setSelectedId(cls.id)} disabled={busy}><span><strong>{cls.name}</strong><span className="student-count">{cls.students.length} students</span></span><span aria-hidden="true">→</span></button>)}</div>
-        {!expired && <SchoolReports data={data} />}
+        {!expired && <>
+          <SchoolCalendarPanel session={session} refresh={calendarRefresh} onCalendars={setCalendars} />
+          <SchoolReports data={data} calendars={calendars} />
+        </>}
         <h2>School-confirmed attendance cached for today</h2>
         <p>{confirmedCount} of {data.classes.length} accessible classes confirmed. Local queues and drafts are excluded.</p>
         <div className="attendance-summary">{(['Present', 'Absent', 'Late'] as const).map((status) => <div className="summary-card" key={status}><strong>{totals[status]}</strong><span>{status}</span></div>)}</div>
